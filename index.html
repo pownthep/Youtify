@@ -3,17 +3,20 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Youtube Downloader</title>
+    <title>Youtubify</title>
     <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
     <link rel="stylesheet" href="https://cdn.plyr.io/3.6.1/plyr.css" />
 
 </head>
 
 <style>
-    @import url('https://fonts.googleapis.com/css?family=Open+Sans&display=swap');
+    @import url('https://fonts.googleapis.com/css?family=Roboto&display=swap');
      :root {
         font-size: 16px;
-        font-family: 'Open Sans', sans-serif;
+    }
+    
+    * {
+        font-family: 'Roboto', sans-serif;
     }
     
     body {
@@ -28,25 +31,38 @@
         align-items: center;
         justify-content: center;
         flex-wrap: wrap;
+        margin-bottom: 100px;
+        margin-top: 50px;
     }
     
     .video {
         width: 100%;
         height: auto;
+        border-radius: 5px;
+        background: #e9ebee;
+    }
+    
+    .placeholder {
+        width: 300px;
+        height: 175px;
+        background: #e9ebee;
     }
     
     #playerContainer {
         position: fixed;
         bottom: 0;
         width: 100%;
+        background-color: white;
+        z-index: 999;
     }
     
     #searchInput {
         margin: 1rem;
         width: 50vw;
-        border: 2px solid #00b3ff63;
-        padding: 20px;
-        border-radius: 60px;
+        border: 2px solid #00b3ff25;
+        padding: 10px;
+        padding-left: 30px;
+        border-radius: 5px;
         transition: border 300ms ease-in-out;
     }
     
@@ -59,7 +75,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        border-bottom: 1px solid #00b3ff63;
+        transition: border 300ms ease-in-out;
     }
     
     .card {
@@ -77,6 +93,7 @@
         background: #e9ebee;
         margin: 0 13px 13px;
         height: 19px;
+        text-align: center;
     }
     
     .card .bars .bar1 {
@@ -114,6 +131,63 @@
             transform: translateX(100%);
         }
     }
+    
+    #details {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: white;
+        padding: 10px;
+        z-index: 999;
+    }
+    
+    .circle-img {
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        margin-right: 20px;
+    }
+    
+     ::-webkit-scrollbar {
+        width: 5px;
+    }
+    /* Track */
+    
+     ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    /* Handle */
+    
+     ::-webkit-scrollbar-thumb {
+        background: #00b3ff6c;
+    }
+    /* Handle on hover */
+    
+     ::-webkit-scrollbar-thumb:hover {
+        background: #00b3ff;
+    }
+    
+    .fade-in {
+        animation: fadeIn ease-in 500ms;
+    }
+    
+    @keyframes fadeIn {
+        0% {
+            opacity: 0;
+        }
+        100% {
+            opacity: 1;
+        }
+    }
+    
+    .box {
+        box-shadow: 0 2.8px 2.2px rgba(0, 0, 0, 0.034), 0 6.7px 5.3px rgba(0, 0, 0, 0.048), 0 12.5px 10px rgba(0, 0, 0, 0.06), 0 22.3px 17.9px rgba(0, 0, 0, 0.072), 0 41.8px 33.4px rgba(0, 0, 0, 0.086), 0 100px 80px rgba(0, 0, 0, 0.12);
+    }
+    
+    .vid-title {
+        text-align: center;
+        padding-top: 10px;
+    }
 </style>
 
 <body>
@@ -121,7 +195,11 @@
         <label style="text-align: center;" for="search"><input type="text" id="searchInput"
                 placeholder="Search"></label>
     </div>
-    <div id="playerContainer">
+    <div id="playerContainer" class="box">
+        <div id="details">
+            <img class="circle-img" id="song-img" src="https://image.freepik.com/free-vector/note-music-logo-design_93835-645.jpg" alt="music thumbnail">
+            <p id="song-name" style="text-align: center;">Song Title</p>
+        </div>
         <audio id="videoPlayer" src="" controls></audio>
     </div>
     <div id="container"></div>
@@ -136,9 +214,32 @@
         let input = document.getElementById('searchInput');
         let container = document.getElementById('container');
         let videoPlayer = document.getElementById('videoPlayer');
+        let songImg = document.getElementById('song-img');
+        let songName = document.getElementById('song-name');
         const player = new Plyr('#videoPlayer');
 
         const savedFolder = `C:/Users/Coding/Documents/music`;
+
+        var observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.target.nodeName === 'DIV' && entry.target.innerText.length === 0 && entry.intersectionRatio > 0) {
+                    console.log('Retrieving video info');
+                    youtubedl.getInfo(`https://www.youtube.com/watch?v=${entry.target.id}`, function(err, info) {
+                        if (err) {
+                            entry.target.classList = 'fade-in vid-title';
+                            entry.target.innerText = 'Unable to get title :(';
+                        } else {
+                            entry.target.classList = 'fade-in vid-title';
+                            entry.target.innerText = info.title;
+                        }
+                    })
+                }
+                if (entry.target.nodeName === 'IMG' && !entry.target.src && entry.intersectionRatio > 0) {
+                    entry.target.classList += ' fade-in';
+                    entry.target.src = entry.target.getAttribute('data-src');
+                }
+            });
+        })
 
         //Event listeners
         input.addEventListener("keyup", function(event) {
@@ -162,10 +263,7 @@
                         }
                         response.text().then(function(data) {
                             let regex = /"videoId":"([^">]+)"/g;
-                            let regex2 = /"title":{"runs":\[{"text":"([^">]+)"/g;
                             let found = data.match(regex);
-                            let found2 = data.match(regex2);
-                            console.log(found2);
                             let ids = {};
                             found.forEach((id) => {
                                 var tmp = id.replace('"videoId":', '').replace(/"/g, '');
@@ -173,7 +271,6 @@
                             });
                             let i = 0;
                             for (key in ids) {
-
                                 var div = document.createElement('div');
                                 var img = document.createElement('img');
                                 var bars = document.createElement('div');
@@ -181,17 +278,18 @@
                                 bars.className = 'bars';
                                 text.classList = 'bar bar1 loading';
                                 text.id = key;
-                                text.innerText = found2[i].replace('title":{"runs":\[{"text":', '').replace(/"/g, '');
                                 i++;
-                                text.classList = '';
                                 bars.append(text);
                                 div.className = 'card';
-                                img.src = `https://i.ytimg.com/vi/${key}/hqdefault.jpg`;
-                                img.className = 'video';
+                                img.setAttribute('data-src', `https://i.ytimg.com/vi/${key}/hqdefault.jpg`);
+                                img.classList = 'video loading';
                                 img.setAttribute('onclick', `playVideo("${key}")`);
 
+                                //imageContainer.append(img);
                                 div.append(img);
                                 div.append(bars);
+                                observer.observe(text);
+                                observer.observe(img);
                                 container.append(div);
                             }
                         });
@@ -203,6 +301,8 @@
         }
 
         function playVideo(id) {
+            songImg.src = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+            songName.innerText = document.getElementById(id).innerText;
             try {
                 if (fs.existsSync(__dirname + '/' + id + '.mp4')) {
                     videoPlayer.src = __dirname + '/' + id + '.mp4';
@@ -216,27 +316,37 @@
         }
 
         function download(id) {
+            try {
+                const video = youtubedl(`https://www.youtube.com/watch?v=${id}`,
+                    // Optional arguments passed to youtube-dl.
+                    ['--format=18'],
+                    // Additional options can be given for calling `child_process.execFile()`.
+                    {
+                        cwd: __dirname
+                    });
 
-            const video = youtubedl(`http://www.youtube.com/watch?v=${id}`,
-                // Optional arguments passed to youtube-dl.
-                ['--format=18'],
-                // Additional options can be given for calling `child_process.execFile()`.
-                {
-                    cwd: __dirname
-                });
+                // Will be called when the download starts.
+                video.on('info', function(info) {
+                    console.log('Download started');
+                    console.log('filename: ' + info._filename);
+                    console.log('size: ' + info.size);
+                })
 
-            // Will be called when the download starts.
-            video.on('info', function(info) {
-                console.log('Download started');
-                console.log('filename: ' + info._filename);
-                console.log('size: ' + info.size);
-            })
+                video.pipe(fs.createWriteStream(__dirname + '/' + id + '.mp4'));
+                video.on('end', function() {
+                    videoPlayer.src = __dirname + '/' + id + '.mp4';
+                    videoPlayer.play();
+                })
+            } catch (error) {
+                console.log(error);
+                fs.unlink(__dirname + '/' + id + '.mp4', (err) => {
+                    if (err) {
+                        console.error(err);
+                        return;
+                    }
+                })
+            }
 
-            video.pipe(fs.createWriteStream(__dirname + '/' + id + '.mp4'));
-            video.on('end', function() {
-                videoPlayer.src = __dirname + '/' + id + '.mp4';
-                videoPlayer.play();
-            })
         }
     </script>
 </body>
