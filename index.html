@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Youtube Downloader</title>
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.6.1/plyr.css" />
+
+</head>
+
+<style>
+    @import url('https://fonts.googleapis.com/css?family=Open+Sans&display=swap');
+
+    :root {
+        font-size: 16px;
+        font-family: 'Open Sans', sans-serif;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100vh;
+    }
+
+    #container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .video {
+        width: 100%;
+        height: auto;
+    }
+
+    #playerContainer {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+    }
+
+    #searchInput {
+        margin: 1rem;
+        width: 50vw;
+        border: 2px solid #00b3ff63;
+        padding: 20px;
+        border-radius: 60px;
+        transition: border 300ms ease-in-out;
+    }
+
+    #searchInput:focus {
+        border: 2px solid #00b3ff;
+        outline: none;
+    }
+
+    .containerCenter {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-bottom: 1px solid #00b3ff63;
+
+    }
+
+    .card {
+        width: 300px;
+        word-wrap: break-word;
+        margin: 10px;
+        height: 350px;
+    }
+
+    .card .bars {
+        height: 85px;
+    }
+
+    .card .bars .bar {
+        background: #e9ebee;
+        margin: 0 13px 13px;
+        height: 19px;
+    }
+
+    .card .bars .bar1 {
+        width: 80%;
+        margin-top: 17px;
+    }
+
+    .card .bars .bar2 {
+        width: 30%;
+    }
+
+    .loading {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .loading::after {
+        content: "";
+        display: block;
+        background-color: #dddfe2;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        transform: translateX(0);
+        animation: 1.5s loading-placeholder ease-in-out infinite;
+    }
+
+    @keyframes loading-placeholder {
+        0% {
+            transform: translateX(-100%);
+        }
+
+        100% {
+            transform: translateX(100%);
+        }
+    }
+</style>
+
+<body>
+    <div class="containerCenter">
+        <label style="text-align: center;" for="search"><input type="text" id="searchInput"
+                placeholder="Search"></label>
+    </div>
+    <div id="playerContainer">
+        <audio id="videoPlayer" src="" controls></audio>
+    </div>
+    <div id="container"></div>
+
+
+    <script src="plyr.polyfilled.js"></script>
+    <script>
+        //Variable declaration
+        const HTMLParser = require('node-html-parser');
+        const fs = require('fs');
+        const youtubedl = require('youtube-dl');
+
+        let input = document.getElementById('searchInput');
+        let container = document.getElementById('container');
+        let videoPlayer = document.getElementById('videoPlayer');
+        const player = new Plyr('#videoPlayer');
+
+        //Event listeners
+        input.addEventListener("keyup", function (event) {
+            // Number 13 is the "Enter" key on the keyboard
+            if (event.keyCode === 13) {
+                // Cancel the default action, if needed
+                search(event.target.value);
+            }
+        });
+
+        //Functions
+        function search(text) {
+            container.innerHTML = '';
+            fetch(`https://www.youtube.com/results?search_query=${text}`)
+                .then(
+                    function (response) {
+                        if (response.status !== 200) {
+                            console.log('Looks like there was a problem. Status Code: ' +
+                                response.status);
+                            return;
+                        }
+                        response.text().then(function (data) {
+                            let regex = /"videoId":"([^">]+)"/g;
+                            let found = data.match(regex);
+                            let ids = {};
+                            found.forEach((id) => {
+                                var tmp = id.replace('"videoId":', '').replace(/"/g, '');
+                                ids[tmp] = 1;
+                            });
+                            for (key in ids) {
+
+                                var div = document.createElement('div');
+                                var img = document.createElement('img');
+                                var bars = document.createElement('div');
+                                var text = document.createElement('div');
+                                bars.className = 'bars';
+                                text.classList = 'bar bar1 loading';
+                                text.id = key;
+                                bars.append(text);
+                                div.className = 'card';
+                                img.src = `https://i.ytimg.com/vi/${key}/hqdefault.jpg`;
+                                img.className = 'video';
+                                img.setAttribute('onclick', `playVideo("${key}")`);
+
+                                div.append(img);
+                                div.append(bars);
+                                container.append(div);
+
+                                youtubedl.getInfo(`http://www.youtube.com/watch?v=${key}`, function (err, info) {
+                                    if (err) {
+                                        document.getElementById(key).innerText = 'Unable to get title';
+                                        document.getElementById(key).classList = '';
+                                    } else {
+                                        document.getElementById(info.id).innerText = info.title;
+                                        document.getElementById(info.id).classList = '';
+                                    }
+
+                                    // console.log('id:', info.id)
+                                    // console.log('title:', info.title)
+                                    // console.log('url:', info.url)
+                                    // console.log('thumbnail:', info.thumbnail)
+                                    // console.log('description:', info.description)
+                                    // console.log('filename:', info._filename)
+                                    // console.log('format id:', info.format_id)
+                                })
+
+
+                            }
+                        });
+                    }
+                )
+                .catch(function (err) {
+                    console.log('Fetch Error :-S', err);
+                });
+        }
+
+        function playVideo(id) {
+            try {
+                if (fs.existsSync(id + '.mp4')) {
+                    videoPlayer.src = id + '.mp4';
+                    videoPlayer.play();
+                } else {
+                    download(id)
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function download(id) {
+
+            const video = youtubedl(`http://www.youtube.com/watch?v=${id}`,
+                // Optional arguments passed to youtube-dl.
+                ['--format=18'],
+                // Additional options can be given for calling `child_process.execFile()`.
+                { cwd: __dirname });
+
+            // Will be called when the download starts.
+            video.on('info', function (info) {
+                console.log('Download started');
+                console.log('filename: ' + info._filename);
+                console.log('size: ' + info.size);
+            })
+
+            video.pipe(fs.createWriteStream(`${id}.mp4`));
+            video.on('end', function () {
+                videoPlayer.src = id + '.mp4';
+                videoPlayer.play();
+            })
+        }
+
+    </script>
+</body>
+
+</html>

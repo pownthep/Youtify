@@ -1,0 +1,22 @@
+{
+  "name": "youtube-downloader",
+  "version": "1.0.0",
+  "description": "",
+  "productName ": "youtube-downloader",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron .",
+    "build": "electron-packager ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^8.2.4",
+    "electron-packager": "^14.2.1"
+  },
+  "dependencies": {
+    "youtube-dl": "^3.0.2"
+  }
+}
