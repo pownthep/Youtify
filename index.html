@@ -162,12 +162,16 @@
                         }
                         response.text().then(function(data) {
                             let regex = /"videoId":"([^">]+)"/g;
+                            let regex2 = /"title":{"runs":\[{"text":"([^">]+)"/g;
                             let found = data.match(regex);
+                            let found2 = data.match(regex2);
+                            console.log(found2);
                             let ids = {};
                             found.forEach((id) => {
                                 var tmp = id.replace('"videoId":', '').replace(/"/g, '');
                                 ids[tmp] = 1;
                             });
+                            let i = 0;
                             for (key in ids) {
 
                                 var div = document.createElement('div');
@@ -177,6 +181,9 @@
                                 bars.className = 'bars';
                                 text.classList = 'bar bar1 loading';
                                 text.id = key;
+                                text.innerText = found2[i].replace('title":{"runs":\[{"text":', '').replace(/"/g, '');
+                                i++;
+                                text.classList = '';
                                 bars.append(text);
                                 div.className = 'card';
                                 img.src = `https://i.ytimg.com/vi/${key}/hqdefault.jpg`;
@@ -186,24 +193,6 @@
                                 div.append(img);
                                 div.append(bars);
                                 container.append(div);
-
-                                youtubedl.getInfo(`http://www.youtube.com/watch?v=${key}`, function(err, info) {
-                                    if (err) {
-                                        document.getElementById(key).innerText = 'Unable to get title';
-                                        document.getElementById(key).classList = '';
-                                    } else {
-                                        document.getElementById(info.id).innerText = info.title;
-                                        document.getElementById(info.id).classList = '';
-                                    }
-
-                                    // console.log('id:', info.id)
-                                    // console.log('title:', info.title)
-                                    // console.log('url:', info.url)
-                                    // console.log('thumbnail:', info.thumbnail)
-                                    // console.log('description:', info.description)
-                                    // console.log('filename:', info._filename)
-                                    // console.log('format id:', info.format_id)
-                                })
                             }
                         });
                     }
@@ -216,7 +205,6 @@
         function playVideo(id) {
             try {
                 if (fs.existsSync(__dirname + '/' + id + '.mp4')) {
-                    console.log(__dirname + '/' + id + '.mp4');
                     videoPlayer.src = __dirname + '/' + id + '.mp4';
                     videoPlayer.play();
                 } else {
@@ -236,7 +224,6 @@
                 {
                     cwd: __dirname
                 });
-            console.log(savedFolder);
 
             // Will be called when the download starts.
             video.on('info', function(info) {
