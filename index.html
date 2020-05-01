@@ -211,13 +211,21 @@
         text-align: right;
         padding: 2px;
     }
+    
+    .button {
+        background-color: #00b3ff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 10px;
+    }
 </style>
 
 <body>
     <div class="containerCenter">
         <label style="text-align: center;" for="search"><input type="text" id="searchInput"
                 placeholder="Search"></label>
-        <button onclick="selectSavedFolder()">Change saved folder</button>
+        <button class="button" onclick="selectSavedFolder()">Change saved folder</button>
     </div>
     <div id="playerContainer" class="box">
         <div id="details">
@@ -410,20 +418,12 @@
             songImg.src = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
             songName.innerText = title;
             let path = savedFolder + '/' + id + '.mp4';
-            fs.access(path, fs.F_OK, (err) => {
-                if (err) {
-                    download(id, path);
-                } else {
-                    console.log('somehow no error');
-                    try {
-                        videoPlayer.src = path;
-                        videoPlayer.play();
-                    } catch (error) {
-                        download(id, path);
-                    }
-                }
-            })
-
+            if (store.get(`collection.${id}`)) {
+                videoPlayer.src = path;
+                videoPlayer.play();
+            } else {
+                download(id, path);
+            }
         }
 
         function download(id, path) {
