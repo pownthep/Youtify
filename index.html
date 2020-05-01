@@ -34,6 +34,7 @@
         flex-wrap: wrap;
         margin-bottom: 150px;
         margin-top: 50px;
+        margin-left: 15vw;
     }
     
     .video {
@@ -41,6 +42,7 @@
         height: 180px;
         background: #e9ebee;
         background-size: 100% 100%;
+        cursor: pointer;
     }
     
     #playerContainer {
@@ -79,10 +81,10 @@
         margin: 10px;
         background-color: white;
         border-radius: 5px;
+        transition: all 300ms ease-in-out;
     }
     
     .card .bars {
-        height: 85px;
         padding: 6px;
     }
     
@@ -226,7 +228,12 @@
         margin-right: 5px;
         cursor: pointer;
         display: inline-flex;
-        vertical-align: top;
+        vertical-align: bottom;
+        transition: color 300ms ease-in-out;
+    }
+    
+    .material-icons:hover {
+        color: #00b3ff;
     }
     
     .nav-item {
@@ -237,6 +244,68 @@
     
     .nav-item:hover {
         color: #00b3ff;
+    }
+    
+    .controls {
+        margin-left: 20px;
+        margin-right: 20px;
+        font-size: 3rem;
+    }
+    
+    #playlist {
+        position: fixed;
+        width: 15vw;
+        height: 70vh;
+        margin-left: 2rem;
+        transition: width 600ms ease-in-out;
+        background-color: white;
+        border-radius: 5px;
+        text-align: center;
+        padding-top: 1rem;
+        margin-top: 10px;
+        overflow-y: scroll;
+    }
+    /* Track */
+    
+    #playlist::-webkit-scrollbar-track {
+        background: #00b3ff;
+    }
+    /* Handle */
+    
+    #playlist::-webkit-scrollbar-thumb {
+        background: #00b3ff;
+    }
+    
+    .queued-song {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        align-content: start;
+        font-size: 13px;
+        padding: 5px;
+        transition: all 300ms ease-in-out;
+        overflow: hidden;
+        cursor: pointer;
+    }
+    
+    #songlist div:first-child {
+        background-color: #00b3ff;
+        color: white;
+    }
+    
+    .queued-song:hover {
+        background-color: #00b3ff;
+        color: white;
+    }
+    
+    .song-name {
+        padding: 5px;
+        overflow: hidden;
+    }
+    
+    #modes {
+        transition: all 300ms ease-in-out;
     }
 </style>
 
@@ -254,16 +323,31 @@
         </div>
         <label style="text-align: center;" for="search"><input type="text" id="searchInput"
                 placeholder="🔎 Search"></label>
-        <button class="button" onclick="selectSavedFolder()">Change saved folder</button>
+        <button class="button" onclick="selectSavedFolder()"><span class="material-icons">
+            folder_open
+            </span>Change saved folder</button>
     </div>
     <div id="playerContainer" class="box">
         <div id="details">
-            <img class="cube-img" id="song-img" src="https://image.freepik.com/free-vector/note-music-logo-design_93835-645.jpg" alt="music thumbnail">
+            <span class="material-icons fade-in" onclick="switchModes(event)" id="modes">repeat</span>
+            <span class="material-icons controls" onclick="previousSong()">skip_previous</span>
+            <img class="circle-img" id="song-img" src="https://image.freepik.com/free-vector/note-music-logo-design_93835-645.jpg" alt="music thumbnail">
             <p id="song-name" style="text-align: center;">Song Title</p>
+            <span class="material-icons controls" onclick="nextSong()">skip_next</span>
+
         </div>
         <audio id="videoPlayer" src="" controls></audio>
     </div>
-    <div id="container"></div>
+    <div>
+        <div id="playlist">
+            <div style="margin-bottom: 10px;">
+                <span class="material-icons" onclick="openQueue()">playlist_play</span>Current Playlist
+            </div>
+            <div id="songlist"></div>
+        </div>
+        <div id="container">
+        </div>
+    </div>
 
 
     <script src="plyr.polyfilled.js"></script>
@@ -285,6 +369,7 @@
         let videoPlayer = document.getElementById('videoPlayer');
         let songImg = document.getElementById('song-img');
         let songName = document.getElementById('song-name');
+        let songList = document.getElementById('songlist');
 
         if (!store.get('library')) {
             selectSavedFolder();
@@ -293,6 +378,12 @@
 
         let tmpData = {};
 
+        videoPlayer.onended = (event) => {
+            nextSong();
+            if (songList.firstChild) {
+                playVideo(songList.firstChild.id.replace('song-', ''), songList.firstChild.title);
+            }
+        };
 
         let getInfoManager = (
             function() {
@@ -411,10 +502,16 @@
                                     var text = document.createElement('div');
                                     var lengthText = document.createElement('p');
                                     var videoDetail = document.createElement('p');
+                                    var icon = document.createElement('span');
+
+                                    icon.innerText = 'playlist_add';
+                                    icon.className = 'material-icons';
+                                    icon.setAttribute('onclick', `queueSong("${videoId}", "${title.replace(/"/g,'')}")`);
+                                    videoDetail.append(icon);
                                     bars.className = 'bars';
                                     text.classList = 'fade-in vid-title';
                                     lengthText.innerText = duration;
-                                    videoDetail.innerText = `${viewCount} ${published}`;
+                                    videoDetail.innerHTML += `${viewCount} ${published}`;
                                     videoDetail.className = 'video-detail';
                                     lengthText.className = 'duration';
                                     img.append(lengthText);
@@ -449,6 +546,7 @@
             songName.innerText = title;
             let path = savedFolder + '/' + id + '.mp4';
             if (store.get(`collection.${id}`)) {
+                prependQueue(id, title);
                 videoPlayer.src = path;
                 videoPlayer.play();
             } else {
@@ -457,7 +555,6 @@
         }
 
         function download(id, path) {
-            store.set(`collection.${id}`, tmpData[id]);
             try {
                 const video = youtubedl(`https://www.youtube.com/watch?v=${id}`,
                     // Optional arguments passed to youtube-dl.
@@ -477,7 +574,6 @@
                 video.on('error', function error(err) {
                     console.log(err);
                     deleteFile(path);
-                    store
                 });
                 video.pipe(fs.createWriteStream(path));
                 video.on('end', function() {
@@ -534,11 +630,16 @@
                 var text = document.createElement('div');
                 var lengthText = document.createElement('p');
                 var videoDetail = document.createElement('p');
+                var icon = document.createElement('span');
 
+                icon.innerText = 'playlist_add';
+                icon.className = 'material-icons';
+                icon.setAttribute('onclick', `queueSong("${video}", "${collection[video].title.replace(/"/g,'')}")`);
                 bars.className = 'bars';
                 text.classList = 'fade-in vid-title';
                 lengthText.innerText = collection[video].duration;
-                videoDetail.innerText = `${collection[video].viewCount} ${collection[video].published}`;
+                videoDetail.append(icon);
+                videoDetail.innerHTML += `${collection[video].viewCount} ${collection[video].published}`;
                 videoDetail.className = 'video-detail';
                 lengthText.className = 'duration';
                 img.append(lengthText);
@@ -549,10 +650,10 @@
                 div.className = 'card';
                 img.id = video;
                 img.setAttribute('data-src', `https://i.ytimg.com/vi/${video}/hqdefault.jpg`);
-                if (collection[video].movingThumbnail.length > 0) img.setAttribute('onmouseover', `this.style.background= "url('${collection[video].movingThumbnail}')"`);
+                //if (collection[video].movingThumbnail.length > 0) img.setAttribute('onmouseover', `this.style.background= "url('${collection[video].movingThumbnail}')"`);
 
                 img.classList = 'video loading';
-                img.setAttribute('onclick', `playVideo("${video}", "${collection[video].title}")`);
+                img.setAttribute('onclick', `playVideo("${video}", "${collection[video].title.replace(/"/g,'')}")`);
 
                 div.append(img);
                 div.append(bars);
@@ -565,6 +666,58 @@
             document.getElementById('library').style.color = 'black';
             document.getElementById('home').style.color = '#00b3ff';
             search('music');
+        }
+
+        function openQueue() {
+            document.getElementById('playlist').style.width = '300px';
+        }
+
+        function queueSong(id, title) {
+            let container = document.createElement('div');
+            container.className = 'queued-song';
+            container.setAttribute('title', 'song-' + id)
+            let img = document.createElement('img');
+            img.src = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+            img.className = 'circle-img';
+
+            let p = document.createElement('p');
+            p.className = 'song-name';
+            p.innerText = title;
+
+            container.append(img);
+            container.append(p);
+            songList.append(container);
+        }
+
+        function switchModes(event) {
+            console.log(event);
+            if (event.target.textContent === 'repeat') event.target.textContent = 'repeat_one';
+            else if (event.target.textContent === 'repeat_one') event.target.textContent = 'shuffle';
+            else event.target.textContent = 'repeat';
+        }
+
+        function nextSong() {
+            songList.append(songList.firstChild);
+        }
+
+        function previousSong() {
+            songList.prepend(songList.lastChild);
+        }
+
+        function prependQueue(id, title) {
+            let container = document.createElement('div');
+            container.className = 'queued-song';
+            let img = document.createElement('img');
+            img.src = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+            img.className = 'circle-img';
+
+            let p = document.createElement('p');
+            p.className = 'song-name';
+            p.innerText = title;
+
+            container.append(img);
+            container.append(p);
+            songList.prepend(container);
         }
     </script>
 </body>
