@@ -10,13 +10,13 @@
 </head>
 
 <style>
-    @import url('https://fonts.googleapis.com/css?family=Roboto&display=swap');
+    @import url('https://fonts.googleapis.com/css?family=Jost&display=swap');
      :root {
         font-size: 16px;
     }
     
     * {
-        font-family: 'Roboto', sans-serif;
+        font-family: 'Jost', sans-serif;
     }
     
     body {
@@ -24,6 +24,7 @@
         padding: 0;
         width: 100%;
         height: 100vh;
+        background: #c2c2c329;
     }
     
     #container {
@@ -31,7 +32,7 @@
         align-items: center;
         justify-content: center;
         flex-wrap: wrap;
-        margin-bottom: 100px;
+        margin-bottom: 150px;
         margin-top: 50px;
     }
     
@@ -53,7 +54,7 @@
     #searchInput {
         margin: 1rem;
         width: 50vw;
-        border: 2px solid #00b3ff25;
+        border: 2px solid #ffffff;
         padding: 10px;
         padding-left: 30px;
         border-radius: 5px;
@@ -76,11 +77,13 @@
         width: 320px;
         word-wrap: break-word;
         margin: 10px;
-        height: 350px;
+        background-color: white;
+        border-radius: 5px;
     }
     
     .card .bars {
         height: 85px;
+        padding: 6px;
     }
     
     .card .bars .bar {
@@ -142,6 +145,13 @@
         margin-right: 20px;
     }
     
+    .cube-img {
+        border-radius: 5px;
+        width: 50px;
+        height: 50px;
+        margin-right: 20px;
+    }
+    
      ::-webkit-scrollbar {
         width: 5px;
     }
@@ -153,7 +163,7 @@
     /* Handle */
     
      ::-webkit-scrollbar-thumb {
-        background: #00b3ff6c;
+        background: #00b3ff;
     }
     /* Handle on hover */
     
@@ -174,6 +184,17 @@
         }
     }
     
+    .duration {
+        color: #00b3ff;
+        background-color: rgba(0, 0, 0, 0.363);
+        margin: 0;
+        position: relative;
+        bottom: 0;
+        padding-left: 5px;
+        padding-top: 2px;
+        font-weight: bold;
+    }
+    
     .box {
         box-shadow: 0 2.8px 2.2px rgba(0, 0, 0, 0.034), 0 6.7px 5.3px rgba(0, 0, 0, 0.048), 0 12.5px 10px rgba(0, 0, 0, 0.06), 0 22.3px 17.9px rgba(0, 0, 0, 0.072), 0 41.8px 33.4px rgba(0, 0, 0, 0.086), 0 100px 80px rgba(0, 0, 0, 0.12);
     }
@@ -181,6 +202,14 @@
     .vid-title {
         text-align: center;
         padding-top: 10px;
+        font-weight: bold;
+        height: 48px;
+    }
+    
+    .video-detail {
+        font-size: smaller;
+        text-align: right;
+        padding: 2px;
     }
 </style>
 
@@ -191,7 +220,7 @@
     </div>
     <div id="playerContainer" class="box">
         <div id="details">
-            <img class="circle-img" id="song-img" src="https://image.freepik.com/free-vector/note-music-logo-design_93835-645.jpg" alt="music thumbnail">
+            <img class="cube-img" id="song-img" src="https://image.freepik.com/free-vector/note-music-logo-design_93835-645.jpg" alt="music thumbnail">
             <p id="song-name" style="text-align: center;">Song Title</p>
         </div>
         <audio id="videoPlayer" src="" controls></audio>
@@ -321,10 +350,18 @@
                                     var img = document.createElement('div');
                                     var bars = document.createElement('div');
                                     var text = document.createElement('div');
+                                    var lengthText = document.createElement('p');
+                                    var videoDetail = document.createElement('p');
                                     bars.className = 'bars';
                                     text.classList = 'fade-in vid-title';
-                                    text.innerText = `${title} ${duration} ${viewCount} ${published}`;
+                                    lengthText.innerText = duration;
+                                    videoDetail.innerText = `${viewCount} ${published}`;
+                                    videoDetail.className = 'video-detail';
+                                    lengthText.className = 'duration';
+                                    img.append(lengthText);
+                                    text.innerText = `${title}`;
                                     bars.append(text);
+                                    bars.append(videoDetail);
 
                                     div.className = 'card';
                                     img.id = videoId;
