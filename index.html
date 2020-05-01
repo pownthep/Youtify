@@ -6,7 +6,7 @@
     <title>Youtubify</title>
     <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
     <link rel="stylesheet" href="https://cdn.plyr.io/3.6.1/plyr.css" />
-
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 
 <style>
@@ -172,7 +172,7 @@
     }
     
     .fade-in {
-        animation: fadeIn ease-in 500ms;
+        animation: fadeIn ease-in 1000ms;
     }
     
     @keyframes fadeIn {
@@ -218,13 +218,42 @@
         border: none;
         border-radius: 5px;
         padding: 10px;
+        cursor: pointer;
+    }
+    
+    .material-icons {
+        margin-left: 5px;
+        margin-right: 5px;
+        cursor: pointer;
+        display: inline-flex;
+        vertical-align: top;
+    }
+    
+    .nav-item {
+        margin-right: 20px;
+        cursor: pointer;
+        transition: color 300ms ease-in-out;
+    }
+    
+    .nav-item:hover {
+        color: #00b3ff;
     }
 </style>
 
 <body>
     <div class="containerCenter">
+        <div class="nav-item" onclick="renderHome()" id="home">
+            <span class="material-icons">
+                home
+                </span>Home
+        </div>
+        <div class="nav-item" onclick="renderLibrary()" id="library">
+            <span class="material-icons">
+                    library_music
+                    </span> Library
+        </div>
         <label style="text-align: center;" for="search"><input type="text" id="searchInput"
-                placeholder="Search"></label>
+                placeholder="🔎 Search"></label>
         <button class="button" onclick="selectSavedFolder()">Change saved folder</button>
     </div>
     <div id="playerContainer" class="box">
@@ -372,7 +401,8 @@
                                         movingThumbnail: movingThumbnail,
                                         viewCount: viewCount,
                                         duration: duration,
-                                        published: published
+                                        published: published,
+                                        location: savedFolder + '/' + videoId + '.mp4'
                                     };
 
                                     var div = document.createElement('div');
@@ -427,6 +457,7 @@
         }
 
         function download(id, path) {
+            store.set(`collection.${id}`, tmpData[id]);
             try {
                 const video = youtubedl(`https://www.youtube.com/watch?v=${id}`,
                     // Optional arguments passed to youtube-dl.
@@ -484,11 +515,56 @@
             }).then(result => {
                 if (!result.canceled) {
                     store.set('library', result.filePaths);
-                    console.log(store.get('library'));
+                    savedFolder = store.get('library')[0];
                 }
             }).catch(err => {
                 console.log(err)
             });
+        }
+
+        function renderLibrary() {
+            container.innerHTML = '';
+            document.getElementById('library').style.color = '#00b3ff';
+            document.getElementById('home').style.color = 'black';
+            let collection = store.get('collection');
+            for (video in collection) {
+                var div = document.createElement('div');
+                var img = document.createElement('div');
+                var bars = document.createElement('div');
+                var text = document.createElement('div');
+                var lengthText = document.createElement('p');
+                var videoDetail = document.createElement('p');
+
+                bars.className = 'bars';
+                text.classList = 'fade-in vid-title';
+                lengthText.innerText = collection[video].duration;
+                videoDetail.innerText = `${collection[video].viewCount} ${collection[video].published}`;
+                videoDetail.className = 'video-detail';
+                lengthText.className = 'duration';
+                img.append(lengthText);
+                text.innerText = `${collection[video].title}`;
+                bars.append(text);
+                bars.append(videoDetail);
+
+                div.className = 'card';
+                img.id = video;
+                img.setAttribute('data-src', `https://i.ytimg.com/vi/${video}/hqdefault.jpg`);
+                if (collection[video].movingThumbnail.length > 0) img.setAttribute('onmouseover', `this.style.background= "url('${collection[video].movingThumbnail}')"`);
+
+                img.classList = 'video loading';
+                img.setAttribute('onclick', `playVideo("${video}", "${collection[video].title}")`);
+
+                div.append(img);
+                div.append(bars);
+                observer.observe(img);
+                container.append(div);
+            }
+        }
+
+        function renderHome() {
+            document.getElementById('library').style.color = 'black';
+            document.getElementById('home').style.color = '#00b3ff';
+            search('music');
         }
     </script>
 </body>
