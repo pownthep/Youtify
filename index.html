@@ -36,16 +36,10 @@
     }
     
     .video {
-        width: 100%;
-        height: auto;
-        border-radius: 5px;
+        width: 320px;
+        height: 180px;
         background: #e9ebee;
-    }
-    
-    .placeholder {
-        width: 300px;
-        height: 175px;
-        background: #e9ebee;
+        background-size: 100% 100%;
     }
     
     #playerContainer {
@@ -79,7 +73,7 @@
     }
     
     .card {
-        width: 300px;
+        width: 320px;
         word-wrap: break-word;
         margin: 10px;
         height: 350px;
@@ -219,25 +213,59 @@
         const player = new Plyr('#videoPlayer');
 
         const savedFolder = `C:/Users/Coding/Documents/music`;
-        let queue = [];
+        let videoData = [];
+
+        let getInfoManager = (
+            function() {
+                let queue = [];
+                let downloading = false;
+                let infoDatabase = {};
+
+                function add(id) {
+                    queue.push(id);
+                    if (downloading == false) download();
+                }
+
+                function download() {
+                    if (queue.length > 0) {
+                        downloading = true;
+                        var elem = document.getElementById(queue[0]);
+                        youtubedl.getInfo(`https://www.youtube.com/watch?v=${queue[0]}`, function(err, info) {
+                            if (err) {
+                                elem.classList = 'fade-in vid-title';
+                                elem.innerText = 'Unable to get title :(';
+                                infoDatabase[queue[0]] = {};
+                            } else if (info) {
+                                elem.classList = 'fade-in vid-title';
+                                elem.innerText = info.title;
+                                infoDatabase[queue[0]] = info;
+                            }
+                            queue.shift();
+                            download();
+                        });
+                    } else {
+                        downloading = false;
+                        return;
+                    }
+                }
+
+                function getURL(id) {
+                    return infoDatabase[id].url;
+                }
+                return {
+                    add: add,
+                    getURL: getURL
+                }
+            }
+        )();
 
         var observer = new IntersectionObserver((entries) => {
             entries.forEach((entry) => {
-                if (entry.target.nodeName === 'DIV' && entry.target.innerText.length === 0 && entry.intersectionRatio === 1) {
-                    console.log('Retrieving video info');
-                    youtubedl.getInfo(`https://www.youtube.com/watch?v=${entry.target.id}`, function(err, info) {
-                        if (err) {
-                            entry.target.classList = 'fade-in vid-title';
-                            entry.target.innerText = 'Unable to get title :(';
-                        } else {
-                            entry.target.classList = 'fade-in vid-title';
-                            entry.target.innerText = info.title;
-                        }
-                    })
-                }
-                if (entry.target.nodeName === 'IMG' && !entry.target.src && entry.intersectionRatio > 0) {
-                    entry.target.classList += ' fade-in';
-                    entry.target.src = entry.target.getAttribute('data-src');
+                if (entry.target.nodeName === 'DIV' && !entry.target.src && entry.isIntersecting) {
+                    entry.target.classList = 'video fade-in';
+                    entry.target.style.background = `url(${entry.target.getAttribute('data-src')}) 0% 0% / 100% 100%`;
+                    entry.target.setAttribute('onmouseout', `this.style.background= "url('${entry.target.getAttribute('data-src')}') 0% 0% / 100% 100%"`);
+                    observer.unobserve(entry.target);
                 }
             });
         })
@@ -263,35 +291,54 @@
                             return;
                         }
                         response.text().then(function(data) {
-                            let regex = /"videoId":"([^">]+)"/g;
-                            let found = data.match(regex);
-                            let ids = {};
-                            found.forEach((id) => {
-                                var tmp = id.replace('"videoId":', '').replace(/"/g, '');
-                                ids[tmp] = 1;
-                            });
-                            let i = 0;
-                            for (key in ids) {
-                                var div = document.createElement('div');
-                                var img = document.createElement('img');
-                                var bars = document.createElement('div');
-                                var text = document.createElement('div');
-                                bars.className = 'bars';
-                                text.classList = 'bar bar1 loading';
-                                text.id = key;
-                                i++;
-                                bars.append(text);
-                                div.className = 'card';
-                                img.setAttribute('data-src', `https://i.ytimg.com/vi/${key}/hqdefault.jpg`);
-                                img.classList = 'video loading';
-                                img.setAttribute('onclick', `playVideo("${key}")`);
+                            //let regex = /"videoId":"([^">]+)"/g;
+                            let regex2 = /<script\b[^>]*>([\s\S]*?)<\/script>/g;
+                            // let regex3 = /\{.*\:\{.*\:.*\}\}/g;
+                            // let found = data.match(regex);
+                            let found2 = data.match(regex2);
+                            let ytData = document.createElement('script');
+                            ytData.innerHTML = found2[25].replace('<script >', '').replace('<\/script>', '');
+                            document.body.append(ytData);
+                            videosData = (window["ytInitialData"]["contents"]["twoColumnSearchResultsRenderer"]
+                                ["primaryContents"]["sectionListRenderer"]
+                                ["contents"][0]["itemSectionRenderer"]
+                                ["contents"]);
+                            //console.log(videosData);
+                            for (video of videosData) {
+                                if (video.videoRenderer) {
+                                    var title = video.videoRenderer.title.runs[0].text;
+                                    var videoId = video.videoRenderer.videoId;
+                                    var thumbnail = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+                                    var movingThumbnail = video.videoRenderer.richThumbnail ?
+                                        video.videoRenderer.richThumbnail.movingThumbnailRenderer.movingThumbnailDetails.thumbnails[0].url :
+                                        '';
+                                    var viewCount = video.videoRenderer.shortViewCountText ? video.videoRenderer.shortViewCountText.simpleText : '';
+                                    var duration = video.videoRenderer.lengthText ? video.videoRenderer.lengthText.simpleText : '';
+                                    var published = video.videoRenderer.publishedTimeText ? video.videoRenderer.publishedTimeText.simpleText : '';
 
-                                //imageContainer.append(img);
-                                div.append(img);
-                                div.append(bars);
-                                observer.observe(text);
-                                observer.observe(img);
-                                container.append(div);
+
+                                    var div = document.createElement('div');
+                                    var img = document.createElement('div');
+                                    var bars = document.createElement('div');
+                                    var text = document.createElement('div');
+                                    bars.className = 'bars';
+                                    text.classList = 'fade-in vid-title';
+                                    text.innerText = `${title} ${duration} ${viewCount} ${published}`;
+                                    bars.append(text);
+
+                                    div.className = 'card';
+                                    img.id = videoId;
+                                    img.setAttribute('data-src', `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`);
+                                    if (movingThumbnail.length > 0) img.setAttribute('onmouseover', `this.style.background= "url('${movingThumbnail}')"`);
+
+                                    img.classList = 'video loading';
+                                    img.setAttribute('onclick', `playVideo("${videoId}", "${title}")`);
+
+                                    div.append(img);
+                                    div.append(bars);
+                                    observer.observe(img);
+                                    container.append(div);
+                                }
                             }
                         });
                     }
@@ -301,13 +348,15 @@
                 });
         }
 
-        function playVideo(id) {
+        function playVideo(id, title) {
             songImg.src = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
-            songName.innerText = document.getElementById(id).innerText;
+            songName.innerText = title;
             let path = __dirname + '/' + id + '.mp4';
             fs.access(path, fs.F_OK, (err) => {
                 if (err) {
                     download(id, path);
+                    // videoPlayer.src = getInfoManager.getURL(id);
+                    // videoPlayer.play();
                 } else {
                     console.log('somehow no error');
                     try {
