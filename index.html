@@ -217,6 +217,7 @@
     <div class="containerCenter">
         <label style="text-align: center;" for="search"><input type="text" id="searchInput"
                 placeholder="Search"></label>
+        <button onclick="selectSavedFolder()">Select saved folder</button>
     </div>
     <div id="playerContainer" class="box">
         <div id="details">
@@ -233,16 +234,29 @@
         //Variable declaration
         const fs = require('fs');
         const youtubedl = require('youtube-dl');
+        const {
+            dialog
+        } = require('electron').remote;
+        const Store = require('electron-store');
+        const store = new Store();
+        const player = new Plyr('#videoPlayer');
+        var savedFolder;
+        const collection = store.get('collection') ? store.get('collection') : store.set('collection', {});
 
         let input = document.getElementById('searchInput');
         let container = document.getElementById('container');
         let videoPlayer = document.getElementById('videoPlayer');
         let songImg = document.getElementById('song-img');
         let songName = document.getElementById('song-name');
-        const player = new Plyr('#videoPlayer');
 
-        const savedFolder = `C:/Users/Coding/Documents/music`;
+        if (!store.get('library')) {
+            selectSavedFolder();
+        } else savedFolder = store.get('library')[0];
+
+
         let videoData = [];
+
+
 
         let getInfoManager = (
             function() {
@@ -388,7 +402,7 @@
         function playVideo(id, title) {
             songImg.src = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
             songName.innerText = title;
-            let path = __dirname + '/' + id + '.mp4';
+            let path = savedFolder + '/' + id + '.mp4';
             fs.access(path, fs.F_OK, (err) => {
                 if (err) {
                     download(id, path);
@@ -414,7 +428,7 @@
                     ['--format=18'],
                     // Additional options can be given for calling `child_process.execFile()`.
                     {
-                        cwd: __dirname
+                        cwd: savedFolder
                     });
 
                 // Will be called when the download starts.
@@ -428,13 +442,13 @@
                     console.log(err);
                     deleteFile(path);
                 });
-                video.pipe(fs.createWriteStream(__dirname + '/' + id + '.mp4'));
+                video.pipe(fs.createWriteStream(path));
                 video.on('end', function() {
                     fs.access(path, fs.F_OK, (err) => {
                         if (err) {
                             console.log(err);
                         } else {
-                            videoPlayer.src = __dirname + '/' + id + '.mp4';
+                            videoPlayer.src = path;
                             videoPlayer.play();
                         }
                     })
@@ -454,6 +468,19 @@
                     return;
                 }
             })
+        }
+
+        function selectSavedFolder() {
+            dialog.showOpenDialog({
+                properties: ['openDirectory']
+            }).then(result => {
+                if (!result.canceled) {
+                    store.set('library', result.filePaths);
+                    console.log(store.get('library'));
+                }
+            }).catch(err => {
+                console.log(err)
+            });
         }
     </script>
 </body>
