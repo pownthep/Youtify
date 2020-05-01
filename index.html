@@ -219,10 +219,11 @@
         const player = new Plyr('#videoPlayer');
 
         const savedFolder = `C:/Users/Coding/Documents/music`;
+        let queue = [];
 
         var observer = new IntersectionObserver((entries) => {
             entries.forEach((entry) => {
-                if (entry.target.nodeName === 'DIV' && entry.target.innerText.length === 0 && entry.intersectionRatio > 0) {
+                if (entry.target.nodeName === 'DIV' && entry.target.innerText.length === 0 && entry.intersectionRatio === 1) {
                     console.log('Retrieving video info');
                     youtubedl.getInfo(`https://www.youtube.com/watch?v=${entry.target.id}`, function(err, info) {
                         if (err) {
@@ -303,19 +304,24 @@
         function playVideo(id) {
             songImg.src = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
             songName.innerText = document.getElementById(id).innerText;
-            try {
-                if (fs.existsSync(__dirname + '/' + id + '.mp4')) {
-                    videoPlayer.src = __dirname + '/' + id + '.mp4';
-                    videoPlayer.play();
+            let path = __dirname + '/' + id + '.mp4';
+            fs.access(path, fs.F_OK, (err) => {
+                if (err) {
+                    download(id, path);
                 } else {
-                    download(id)
+                    console.log('somehow no error');
+                    try {
+                        videoPlayer.src = path;
+                        videoPlayer.play();
+                    } catch (error) {
+                        download(id, path);
+                    }
                 }
-            } catch (err) {
-                console.error(err);
-            }
+            })
+
         }
 
-        function download(id) {
+        function download(id, path) {
             try {
                 const video = youtubedl(`https://www.youtube.com/watch?v=${id}`,
                     // Optional arguments passed to youtube-dl.
@@ -332,21 +338,36 @@
                     console.log('size: ' + info.size);
                 })
 
+                video.on('error', function error(err) {
+                    console.log(err);
+                    deleteFile(path);
+                });
                 video.pipe(fs.createWriteStream(__dirname + '/' + id + '.mp4'));
                 video.on('end', function() {
-                    videoPlayer.src = __dirname + '/' + id + '.mp4';
-                    videoPlayer.play();
+                    fs.access(path, fs.F_OK, (err) => {
+                        if (err) {
+                            console.log(err);
+                        } else {
+                            videoPlayer.src = __dirname + '/' + id + '.mp4';
+                            videoPlayer.play();
+                        }
+                    })
                 })
+
             } catch (error) {
                 console.log(error);
-                fs.unlink(__dirname + '/' + id + '.mp4', (err) => {
-                    if (err) {
-                        console.error(err);
-                        return;
-                    }
-                })
+                deleteFile(path);
             }
 
+        }
+
+        function deleteFile(path) {
+            fs.unlink(path, (err) => {
+                if (err) {
+                    console.log(err);
+                    return;
+                }
+            })
         }
     </script>
 </body>
