@@ -217,7 +217,7 @@
     <div class="containerCenter">
         <label style="text-align: center;" for="search"><input type="text" id="searchInput"
                 placeholder="Search"></label>
-        <button onclick="selectSavedFolder()">Select saved folder</button>
+        <button onclick="selectSavedFolder()">Change saved folder</button>
     </div>
     <div id="playerContainer" class="box">
         <div id="details">
@@ -254,8 +254,7 @@
         } else savedFolder = store.get('library')[0];
 
 
-        let videoData = [];
-
+        let tmpData = {};
 
 
         let getInfoManager = (
@@ -342,7 +341,7 @@
                             let ytData = document.createElement('script');
                             ytData.innerHTML = found2[25].replace('<script >', '').replace('<\/script>', '');
                             document.body.append(ytData);
-                            videosData = (window["ytInitialData"]["contents"]["twoColumnSearchResultsRenderer"]
+                            var videosData = (window["ytInitialData"]["contents"]["twoColumnSearchResultsRenderer"]
                                 ["primaryContents"]["sectionListRenderer"]
                                 ["contents"][0]["itemSectionRenderer"]
                                 ["contents"]);
@@ -359,6 +358,14 @@
                                     var duration = video.videoRenderer.lengthText ? video.videoRenderer.lengthText.simpleText : '';
                                     var published = video.videoRenderer.publishedTimeText ? video.videoRenderer.publishedTimeText.simpleText : '';
 
+                                    tmpData[videoId] = {
+                                        title: title,
+                                        thumbnail: thumbnail,
+                                        movingThumbnail: movingThumbnail,
+                                        viewCount: viewCount,
+                                        duration: duration,
+                                        published: published
+                                    };
 
                                     var div = document.createElement('div');
                                     var img = document.createElement('div');
@@ -406,8 +413,6 @@
             fs.access(path, fs.F_OK, (err) => {
                 if (err) {
                     download(id, path);
-                    // videoPlayer.src = getInfoManager.getURL(id);
-                    // videoPlayer.play();
                 } else {
                     console.log('somehow no error');
                     try {
@@ -441,6 +446,7 @@
                 video.on('error', function error(err) {
                     console.log(err);
                     deleteFile(path);
+                    store
                 });
                 video.pipe(fs.createWriteStream(path));
                 video.on('end', function() {
@@ -450,6 +456,7 @@
                         } else {
                             videoPlayer.src = path;
                             videoPlayer.play();
+                            store.set(`collection.${id}`, tmpData[id]);
                         }
                     })
                 })
@@ -472,6 +479,7 @@
 
         function selectSavedFolder() {
             dialog.showOpenDialog({
+                title: 'Please select a folder for saving downloaded files',
                 properties: ['openDirectory']
             }).then(result => {
                 if (!result.canceled) {
