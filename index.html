@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Youtubify</title>
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'unsafe-eval';" />
     <link rel="stylesheet" href="https://cdn.plyr.io/3.6.1/plyr.css" />
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
@@ -363,6 +363,7 @@
         const player = new Plyr('#videoPlayer');
         var savedFolder;
         const collection = store.get('collection') ? store.get('collection') : store.set('collection', {});
+        const ytdl = require('ytdl-core');
 
         let input = document.getElementById('searchInput');
         let container = document.getElementById('container');
@@ -380,9 +381,6 @@
 
         videoPlayer.onended = (event) => {
             nextSong();
-            if (songList.firstChild) {
-                playVideo(songList.firstChild.id.replace('song-', ''), songList.firstChild.title);
-            }
         };
 
         let getInfoManager = (
@@ -461,76 +459,73 @@
                             return;
                         }
                         response.text().then(function(data) {
-                            //let regex = /"videoId":"([^">]+)"/g;
                             let regex2 = /<script\b[^>]*>([\s\S]*?)<\/script>/g;
-                            // let regex3 = /\{.*\:\{.*\:.*\}\}/g;
-                            // let found = data.match(regex);
                             let found2 = data.match(regex2);
-                            let ytData = document.createElement('script');
-                            ytData.innerHTML = found2[25].replace('<script >', '').replace('<\/script>', '');
-                            document.body.append(ytData);
-                            var videosData = (window["ytInitialData"]["contents"]["twoColumnSearchResultsRenderer"]
+                            eval(found2[25].replace('<script >', '').replace('<\/script>', ''));
+                            var videosData = window["ytInitialData"]["contents"]["twoColumnSearchResultsRenderer"]
                                 ["primaryContents"]["sectionListRenderer"]
-                                ["contents"][0]["itemSectionRenderer"]
-                                ["contents"]);
-                            //console.log(videosData);
-                            for (video of videosData) {
-                                if (video.videoRenderer) {
-                                    var title = video.videoRenderer.title.runs[0].text;
-                                    var videoId = video.videoRenderer.videoId;
-                                    var thumbnail = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
-                                    var movingThumbnail = video.videoRenderer.richThumbnail ?
-                                        video.videoRenderer.richThumbnail.movingThumbnailRenderer.movingThumbnailDetails.thumbnails[0].url :
-                                        '';
-                                    var viewCount = video.videoRenderer.shortViewCountText ? video.videoRenderer.shortViewCountText.simpleText : '';
-                                    var duration = video.videoRenderer.lengthText ? video.videoRenderer.lengthText.simpleText : '';
-                                    var published = video.videoRenderer.publishedTimeText ? video.videoRenderer.publishedTimeText.simpleText : '';
+                                ["contents"];
 
-                                    tmpData[videoId] = {
-                                        title: title,
-                                        thumbnail: thumbnail,
-                                        movingThumbnail: movingThumbnail,
-                                        viewCount: viewCount,
-                                        duration: duration,
-                                        published: published,
-                                        location: savedFolder + '/' + videoId + '.mp4'
-                                    };
+                            for (const item of videosData) {
+                                let videos = item['itemSectionRenderer']['contents'];
+                                for (video of videos) {
+                                    if (video.videoRenderer) {
+                                        var title = video.videoRenderer.title.runs[0].text;
+                                        var videoId = video.videoRenderer.videoId;
+                                        var thumbnail = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+                                        var movingThumbnail = video.videoRenderer.richThumbnail ?
+                                            video.videoRenderer.richThumbnail.movingThumbnailRenderer.movingThumbnailDetails.thumbnails[0].url :
+                                            '';
+                                        var viewCount = video.videoRenderer.shortViewCountText ? video.videoRenderer.shortViewCountText.simpleText : '';
+                                        var duration = video.videoRenderer.lengthText ? video.videoRenderer.lengthText.simpleText : '';
+                                        var published = video.videoRenderer.publishedTimeText ? video.videoRenderer.publishedTimeText.simpleText : '';
 
-                                    var div = document.createElement('div');
-                                    var img = document.createElement('div');
-                                    var bars = document.createElement('div');
-                                    var text = document.createElement('div');
-                                    var lengthText = document.createElement('p');
-                                    var videoDetail = document.createElement('p');
-                                    var icon = document.createElement('span');
+                                        tmpData[videoId] = {
+                                            title: title,
+                                            thumbnail: thumbnail,
+                                            movingThumbnail: movingThumbnail,
+                                            viewCount: viewCount,
+                                            duration: duration,
+                                            published: published,
+                                            location: savedFolder + '/' + videoId + '.mp4'
+                                        };
+                                        //console.log(tmpData[videoId]);
+                                        var div = document.createElement('div');
+                                        var img = document.createElement('div');
+                                        var bars = document.createElement('div');
+                                        var text = document.createElement('div');
+                                        var lengthText = document.createElement('p');
+                                        var videoDetail = document.createElement('p');
+                                        var icon = document.createElement('span');
 
-                                    icon.innerText = 'playlist_add';
-                                    icon.className = 'material-icons';
-                                    icon.setAttribute('onclick', `queueSong("${videoId}", "${title.replace(/"/g,'')}")`);
-                                    videoDetail.append(icon);
-                                    bars.className = 'bars';
-                                    text.classList = 'fade-in vid-title';
-                                    lengthText.innerText = duration;
-                                    videoDetail.innerHTML += `${viewCount} ${published}`;
-                                    videoDetail.className = 'video-detail';
-                                    lengthText.className = 'duration';
-                                    img.append(lengthText);
-                                    text.innerText = `${title}`;
-                                    bars.append(text);
-                                    bars.append(videoDetail);
+                                        icon.innerText = 'queue';
+                                        icon.className = 'material-icons';
+                                        icon.setAttribute('onclick', `queueSong("${videoId}", "${title.replace(/"/g,'')}")`);
+                                        videoDetail.append(icon);
+                                        bars.className = 'bars';
+                                        text.classList = 'fade-in vid-title';
+                                        lengthText.innerText = duration;
+                                        videoDetail.innerHTML += `${viewCount} ${published}`;
+                                        videoDetail.className = 'video-detail';
+                                        lengthText.className = 'duration';
+                                        img.append(lengthText);
+                                        text.innerText = `${title}`;
+                                        bars.append(text);
+                                        bars.append(videoDetail);
 
-                                    div.className = 'card';
-                                    img.id = videoId;
-                                    img.setAttribute('data-src', `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`);
-                                    if (movingThumbnail.length > 0) img.setAttribute('onmouseover', `this.style.background= "url('${movingThumbnail}')"`);
+                                        div.className = 'card';
+                                        img.id = videoId;
+                                        img.setAttribute('data-src', `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`);
+                                        if (movingThumbnail.length > 0) img.setAttribute('onmouseover', `this.style.background= "url('${movingThumbnail}')"`);
 
-                                    img.classList = 'video loading';
-                                    img.setAttribute('onclick', `playVideo("${videoId}", "${title}")`);
+                                        img.classList = 'video loading';
+                                        img.setAttribute('onclick', `playVideo("${videoId}", "${title}")`);
 
-                                    div.append(img);
-                                    div.append(bars);
-                                    observer.observe(img);
-                                    container.append(div);
+                                        div.append(img);
+                                        div.append(bars);
+                                        observer.observe(img);
+                                        container.append(div);
+                                    }
                                 }
                             }
                         });
@@ -550,44 +545,21 @@
                 videoPlayer.src = path;
                 videoPlayer.play();
             } else {
-                download(id, path);
+                download(id, path).on('finish', function() {
+                    prependQueue(id, title);
+                    videoPlayer.src = path;
+                    videoPlayer.play();
+                    store.set(`collection.${id}`, tmpData[id]);
+                });
             }
         }
 
         function download(id, path) {
             try {
-                const video = youtubedl(`https://www.youtube.com/watch?v=${id}`,
-                    // Optional arguments passed to youtube-dl.
-                    ['--format=18'],
-                    // Additional options can be given for calling `child_process.execFile()`.
-                    {
-                        cwd: savedFolder
-                    });
-
-                // Will be called when the download starts.
-                video.on('info', function(info) {
-                    console.log('Download started');
-                    console.log('filename: ' + info._filename);
-                    console.log('size: ' + info.size);
-                })
-
-                video.on('error', function error(err) {
-                    console.log(err);
-                    deleteFile(path);
-                });
-                video.pipe(fs.createWriteStream(path));
-                video.on('end', function() {
-                    fs.access(path, fs.F_OK, (err) => {
-                        if (err) {
-                            console.log(err);
-                        } else {
-                            videoPlayer.src = path;
-                            videoPlayer.play();
-                            store.set(`collection.${id}`, tmpData[id]);
-                        }
+                return ytdl(`http://www.youtube.com/watch?v=${id}`, {
+                        filter: format => format.container === 'mp4'
                     })
-                })
-
+                    .pipe(fs.createWriteStream(path));
             } catch (error) {
                 console.log(error);
                 deleteFile(path);
@@ -632,7 +604,7 @@
                 var videoDetail = document.createElement('p');
                 var icon = document.createElement('span');
 
-                icon.innerText = 'playlist_add';
+                icon.innerText = 'queue';
                 icon.className = 'material-icons';
                 icon.setAttribute('onclick', `queueSong("${video}", "${collection[video].title.replace(/"/g,'')}")`);
                 bars.className = 'bars';
@@ -675,7 +647,8 @@
         function queueSong(id, title) {
             let container = document.createElement('div');
             container.className = 'queued-song';
-            container.setAttribute('title', 'song-' + id)
+            container.id = 'song-' + id
+            container.setAttribute('title', title);
             let img = document.createElement('img');
             img.src = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
             img.className = 'circle-img';
@@ -687,6 +660,7 @@
             container.append(img);
             container.append(p);
             songList.append(container);
+            if (songList.children.length === 1) startPlaylist();
         }
 
         function switchModes(event) {
@@ -697,16 +671,21 @@
         }
 
         function nextSong() {
-            songList.append(songList.firstChild);
+            if (songList.children.length > 1) songList.append(songList.firstChild);
+            startPlaylist();
         }
 
         function previousSong() {
-            songList.prepend(songList.lastChild);
+            if (songList.children.length > 1) songList.prepend(songList.lastChild);
+            startPlaylist();
         }
 
         function prependQueue(id, title) {
             let container = document.createElement('div');
             container.className = 'queued-song';
+            container.id = 'song-' + id
+            container.setAttribute('title', title);
+
             let img = document.createElement('img');
             img.src = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
             img.className = 'circle-img';
@@ -719,7 +698,30 @@
             container.append(p);
             songList.prepend(container);
         }
+
+        function startPlaylist() {
+            if (songList.firstChild) playSong(songList.firstChild.id.replace('song-', ''), songList.firstChild.title);
+        }
+
+        function playSong(id, title) {
+            if (store.get(`collection.${id}`)) {
+                songImg.src = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+                songName.innerText = title;
+                videoPlayer.src = store.get(`collection.${id}.location`);
+                videoPlayer.play();
+            } else {
+                let path = savedFolder + '/' + id + '.mp4';
+                download(id, path).on('finish', function() {
+                    songImg.src = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+                    songName.innerText = title;
+                    videoPlayer.src = path;
+                    videoPlayer.play();
+                    store.set(`collection.${id}`, tmpData[id]);
+                });
+            }
+        }
     </script>
+    <script></script>
 </body>
 
 </html>
