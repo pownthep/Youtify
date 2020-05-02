@@ -390,6 +390,8 @@
             dialog
         } = require('electron').remote;
         const Store = require('electron-store');
+
+
         const store = new Store();
         const player = new Plyr('#videoPlayer');
         var savedFolder;
@@ -402,6 +404,7 @@
         let songImg = document.getElementById('song-img');
         let songName = document.getElementById('song-name');
         let songList = document.getElementById('songlist');
+        let playbackMode = document.getElementById('modes');
 
         if (!store.get('library')) {
             selectSavedFolder();
@@ -758,8 +761,22 @@
         }
 
         function nextSong() {
-            if (songList.children.length > 1) songList.append(songList.firstChild);
-            startPlaylist();
+            if (playbackMode.innerText === 'repeat') {
+                if (songList.children.length > 1) songList.append(songList.firstChild);
+                startPlaylist();
+            } else if (playbackMode.innerText === 'repeat_one') {
+                startPlaylist();
+            } else {
+                if (songList.children.length === 1) {
+                    startPlaylist();
+                    return;
+                }
+                let randomSong = getRandomInt(1, songList.children.length);
+                console.log(randomSong);
+                console.log(songList.children[randomSong]);
+                songList.prepend(songList.children.item(randomSong));
+                startPlaylist();
+            }
         }
 
         function previousSong() {
@@ -820,6 +837,12 @@
                 store.set(`collection.${id}`, tmpData[id]);
                 event.target.innerText = 'offline_pin';
             });
+        }
+
+        function getRandomInt(min, max) {
+            min = Math.ceil(min);
+            max = Math.floor(max);
+            return Math.floor(Math.random() * (max - min)) + min; //The maximum is exclusive and the minimum is inclusive
         }
     </script>
     <script></script>
