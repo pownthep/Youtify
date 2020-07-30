@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Youtubify</title>
+    <title>Youtify</title>
     <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'unsafe-eval';" />
     <link rel="stylesheet" href="https://cdn.plyr.io/3.6.1/plyr.css" />
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -24,7 +24,7 @@
         padding: 0;
         width: 100%;
         height: 100vh;
-        background: #c2c2c329;
+        background: white;
     }
     
     #container {
@@ -49,7 +49,7 @@
         position: fixed;
         bottom: 0;
         width: 100%;
-        background-color: white;
+        background-color: #f1f3f4;
         z-index: 999;
     }
     
@@ -61,6 +61,7 @@
         padding-left: 30px;
         border-radius: 5px;
         transition: border 300ms ease-in-out;
+        background-color: #f1f3f4;
     }
     
     #searchInput:focus {
@@ -79,7 +80,7 @@
         width: 320px;
         word-wrap: break-word;
         margin: 10px;
-        background-color: white;
+        background-color: #f1f3f4;
         border-radius: 5px;
         transition: all 300ms ease-in-out;
     }
@@ -135,7 +136,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background-color: white;
+        background-color: #f1f3f4;
         padding: 10px;
         z-index: 999;
     }
@@ -259,7 +260,7 @@
         height: 70vh;
         margin-left: 2rem;
         transition: width 600ms ease-in-out;
-        background-color: white;
+        background-color: #f1f3f4;
         border-radius: 5px;
         text-align: center;
         padding-top: 1rem;
@@ -338,6 +339,9 @@
     }
     
     .icon-play {}
+    .audio-player {
+        width: 100%;
+    }
 </style>
 
 <body>
@@ -367,7 +371,7 @@
             <span class="material-icons controls" onclick="nextSong()">skip_next</span>
 
         </div>
-        <audio id="videoPlayer" src="" controls></audio>
+        <audio id="videoPlayer" src="" controls class="audio-player"></audio>
     </div>
     <div>
         <div id="playlist">
@@ -379,13 +383,9 @@
         <div id="container">
         </div>
     </div>
-
-
-    <script src="plyr.polyfilled.js"></script>
     <script>
         //Variable declaration
         const fs = require('fs');
-        const youtubedl = require('youtube-dl');
         const {
             dialog
         } = require('electron').remote;
@@ -393,7 +393,6 @@
 
 
         const store = new Store();
-        const player = new Plyr('#videoPlayer');
         var savedFolder;
         const collection = store.get('collection') ? store.get('collection') : store.set('collection', {});
         const ytdl = require('ytdl-core');
@@ -416,50 +415,6 @@
         videoPlayer.onended = (event) => {
             nextSong();
         };
-
-        let getInfoManager = (
-            function() {
-                let queue = [];
-                let downloading = false;
-                let infoDatabase = {};
-
-                function add(id) {
-                    queue.push(id);
-                    if (downloading == false) download();
-                }
-
-                function download() {
-                    if (queue.length > 0) {
-                        downloading = true;
-                        var elem = document.getElementById(queue[0]);
-                        youtubedl.getInfo(`https://www.youtube.com/watch?v=${queue[0]}`, function(err, info) {
-                            if (err) {
-                                elem.classList = 'fade-in vid-title';
-                                elem.innerText = 'Unable to get title :(';
-                                infoDatabase[queue[0]] = {};
-                            } else if (info) {
-                                elem.classList = 'fade-in vid-title';
-                                elem.innerText = info.title;
-                                infoDatabase[queue[0]] = info;
-                            }
-                            queue.shift();
-                            download();
-                        });
-                    } else {
-                        downloading = false;
-                        return;
-                    }
-                }
-
-                function getURL(id) {
-                    return infoDatabase[id].url;
-                }
-                return {
-                    add: add,
-                    getURL: getURL
-                }
-            }
-        )();
 
         var observer = new IntersectionObserver((entries) => {
             entries.forEach((entry) => {
@@ -844,6 +799,7 @@
             max = Math.floor(max);
             return Math.floor(Math.random() * (max - min)) + min; //The maximum is exclusive and the minimum is inclusive
         }
+        renderHome();
     </script>
     <script></script>
 </body>
